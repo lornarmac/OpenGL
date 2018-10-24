@@ -127,7 +127,7 @@ int main(void)
 	/* Explicitly ask for the compatibility profile for OpenGL Context - this is the default anyway */
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	/* Create a windowed mode window and its OpenGL context */
 	window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);	// creates a window AND it's openGL context
@@ -161,16 +161,17 @@ int main(void)
 	};
 
 	unsigned int vao;
-	glGenVertexArrays(1, &vao);
+	GLCall(glGenVertexArrays(1, &vao));
+	GLCall(glBindVertexArray(vao));
 
 	unsigned int bufferid;
 	GLCall(glGenBuffers(1, &bufferid));	// get a buffer id
 	GLCall(glBindBuffer(GL_ARRAY_BUFFER, bufferid));		// select the buffer
 	GLCall(glBufferData(GL_ARRAY_BUFFER, 2 * 4 * sizeof(float), positions, GL_STATIC_DRAW));	// assign data to the buffer
 
-	GLCall(glEnableVertexAttribArray(vao));
+	GLCall(glEnableVertexAttribArray(0));
 	// tell opengl the layout of the buffer:
-	GLCall(glVertexAttribPointer(vao, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));	// **2nd param of 2 indicates that the data is a vec2
+	GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));	// **2nd param of 2 indicates that the data is a vec2
 
 	unsigned int ibo;	// index buffer object
 	GLCall(glGenBuffers(1, &ibo));
@@ -199,10 +200,10 @@ int main(void)
 	float increment = 0.0001f;
 
 	/* unbind everything - we're doing this to make clear the steps needed each time we do a draw below */
-	glUseProgram(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
+	//glUseProgram(0);
+	//glBindBuffer(GL_ARRAY_BUFFER, 0);
+	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	//glBindVertexArray(0);
 
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
@@ -211,15 +212,17 @@ int main(void)
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		/* Do necessary binding before we draw */
-		GLCall(glUseProgram(shader));
+		//GLCall(glUseProgram(shader));
 		GLCall(glUniform4f(location, red, green, blue, 1.0f));
 
+		//GLCall(glBindBuffer(GL_ARRAY_BUFFER, bufferid));
 		//GLCall(glBindVertexArray(vao));
-		GLCall(glBindBuffer(GL_ARRAY_BUFFER, bufferid));
-		GLCall(glEnableVertexAttribArray(0));
+
 		// tell opengl the layout of the buffer:
-		GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));	// **2nd param of 2 indicates that the data is a vec2		
-		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
+		//GLCall(glEnableVertexAttribArray(0));
+		// bind array buffer to layout
+		//GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));	// **2nd param of 2 indicates that the data is a vec2		
+		//GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
 
 		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));	// can use nullptr because index buffer already bound
 
