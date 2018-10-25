@@ -1,5 +1,5 @@
 #include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <GLFW/glfw3.h>	// would use EGL with OpenGLES?
 //#include <assert.h>
 #include <iostream>
 #include <fstream>
@@ -175,8 +175,10 @@ int main(void)
 	GLCall(glBindBuffer(GL_ARRAY_BUFFER, bufferid));		// select the buffer
 	GLCall(glBufferData(GL_ARRAY_BUFFER, 2 * 4 * sizeof(float), positions, GL_STATIC_DRAW));	// assign data to the buffer
 
-	// specify layout of the vertex buffer (so opengl knows how to interpret the data)
+	// specify layout of the vertex buffer (so opengl knows how to interpret the data):
+	// enable index 0 of the vertex arrays (we only have one array) 
 	GLCall(glEnableVertexAttribArray(0));
+	// "bind index 0 of the vertex array (which in our sample code only has 1 array) to the currently bound vertex buffer" (...with this layout?)
 	GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));	// **2nd param of 2 indicates that the data is a vec2
 
 	// create index buffer:
@@ -196,6 +198,7 @@ int main(void)
 	GLCall(glUniform4f(location, 0.2f, 0.3f, 0.8f, 1.0f));
 
 	/* unbind everything - we're doing this to make clear the steps needed each time we do a draw below */
+	GLCall(glBindVertexArray(0));
 	GLCall(glUseProgram(0));
 	GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
 	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
@@ -207,17 +210,16 @@ int main(void)
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		/* Do necessary binding before we draw */
+		// bind shader:
 		GLCall(glUseProgram(shader));
 		GLCall(glUniform4f(location, red, green, blue, 1.0f));
 
-		GLCall(glBindBuffer(GL_ARRAY_BUFFER, bufferid));
-
-		// tell opengl the layout of the buffer:
-		GLCall(glEnableVertexAttribArray(0));
-		// bind array buffer to layout
-		GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));	// **2nd param of 2 indicates that the data is a vec2		
+		// bind vao
+		GLCall(glBindVertexArray(vao));		
+		// bind index buffer
 		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
 
+		// draw
 		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));	// can use nullptr because index buffer already bound
 
 		if (red < 1.0)
