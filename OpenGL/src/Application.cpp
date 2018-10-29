@@ -5,33 +5,12 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include "renderer.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
+#include "VertexArray.h"
+#include "VertexBufferLayout.h"
 
-//#define ASSERT(x) if(!(x)) assert(false);
-#define ASSERT(x) if(!(x)) __debugbreak();	// note that __ indicates this is a MSVC compiler intrinsic call; won't work with other compilers
-
-#ifdef _DEBUG
-#define GLCall(x) GLClearError();\
-	x;\
-	ASSERT(GLLogCall(#x, __FILE__, __LINE__))
-#else
-#define GLCall(x) x
-#endif
-
-static void GLClearError()
-{
-	while (glGetError() != GL_NO_ERROR);
-}
-
-static bool GLLogCall(const char *function, const char* file, int line)
-{
-	if (GLenum error = glGetError())		//GL_NO_ERROR is 0
-	{
-		std::cout << "GL Error " << error << " in " << function << " " << file << ": " << line << std::endl;
-		return false;
-	}
-	else
-		return true;
-}
 
 struct ShaderProgramSource {
 	std::string VertexSource;
@@ -152,6 +131,11 @@ int main(void)
 		std::cout << "GLEW Error!" << std::endl;
 		return -1;
 	}
+
+	{	// we're creating a scope here so that the vb and ib which we create on the stack are destroyed before we call glfwTerminate 
+		// if we don't enclose them in a scope then they don't get destroyed until after glfwTerminate, at which point there's no 
+		// glcontext and glCheckError will return an error if there is no valid opengl context, since we call glCheckError in a loop 
+		// the program would never terminate
 	float positions[] = {
 		-0.5f, -0.5f,		// 0 (vertex 0, position attribute only)
 		 0.5f, -0.5f,		// 1	
@@ -169,23 +153,17 @@ int main(void)
 	GLCall(glGenVertexArrays(1, &vao));
 	GLCall(glBindVertexArray(vao));
 
-	// create vertex buffer:
-	unsigned int bufferid;
-	GLCall(glGenBuffers(1, &bufferid));	// get a buffer id
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, bufferid));		// select the buffer
-	GLCall(glBufferData(GL_ARRAY_BUFFER, 2 * 4 * sizeof(float), positions, GL_STATIC_DRAW));	// assign data to the buffer
+	VertexArray va;
 
-	// specify layout of the vertex buffer (so opengl knows how to interpret the data):
-	// enable index 0 of the vertex arrays (we only have one array) 
-	GLCall(glEnableVertexAttribArray(0));
-	// "bind index 0 of the vertex array (which in our sample code only has 1 array) to the currently bound vertex buffer" (...with this layout?)
-	GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));	// **2nd param of 2 indicates that the data is a vec2
+	// create vertex buffer:
+	VertexBuffer vb(positions, 4 * 2 * sizeof(float));
+
+	VertexBufferLayout layout;
+	layout.Push<float>(2);
+	va.AddBuffer(vb, layout);
 
 	// create index buffer:
-	unsigned int ibo;
-	GLCall(glGenBuffers(1, &ibo));
-	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));		// select the buffer
-	GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW)); // assign data to index buffer
+	IndexBuffer ib(indices, 6);
 
 	// create shader:
 	ShaderProgramSource source = ParseShader("res/shaders/basic.shader");
@@ -214,10 +192,10 @@ int main(void)
 		GLCall(glUseProgram(shader));
 		GLCall(glUniform4f(location, red, green, blue, 1.0f));
 
-		// bind vao
-		GLCall(glBindVertexArray(vao));		
+		// bind va
+		va.Bind();
 		// bind index buffer
-		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
+		ib.Bind();
 
 		// draw
 		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));	// can use nullptr because index buffer already bound
@@ -239,6 +217,7 @@ int main(void)
 
 	GLCall(glDeleteProgram(shader));
 
+	}
 	glfwTerminate();
 	return 0;
 }
